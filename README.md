@@ -9,6 +9,7 @@ Description:    Ubuntu 20.04.2 LTS
 Codename:       focal
 ```
 ```bash
+$ lsb_release -idc
 Distributor ID: Ubuntu
 Description:    Ubuntu 18.04.5 LTS
 Codename:       bionic
@@ -26,17 +27,51 @@ $ sudo lvdisplay -C
   lv_lxd01           vg_vm01  -wi-a----- 100.00g
   (..snip..)
 ```
+```bash
+$ sudo lvdisplay vg_vm01
+  (..snip..)
+  --- Logical volume ---
+  LV Path                /dev/vg_vm01/lv_lxd01
+  LV Name                lv_lxd01
+  VG Name                vg_vm01
+  (..snip..)
+```
 
 ## LXD のインストール
-### Ubuntu 20.04 LTS
+### snap (Recommended)
+```bash
+$ sudo snap info lxd | grep " 4.0/"
+  4.0/stable:       4.0.5       2021-02-01 (19188) 73MB -
+  4.0/candidate:    4.0.5       2021-02-12 (19398) 73MB -
+  4.0/beta:         ^
+  4.0/edge:         git-25f500d 2021-02-26 (19576) 73MB -
+```
 ```bash
 $ sudo snap install lxd --channel=4.0/stable
-$ lxd --version
-4.0.4
+lxd (4.0/stable) 4.0.5 from Canonical✓ installed
 ```
-### Ubuntu 18.04 LTS
 ```bash
-$ sudo snap install lxd --channel=3.0/stable
+$ which lxd
+/snap/bin/lxd
+```
+```bash
+$ lxd --version
+4.0.5
+```
+### Ubuntu 18.04 LTS (Package, Not Recommended)
+```bash
+$ sudo apt-get install lxd
+```
+```bash
+$ dpkg -l | grep lxd
+ii  lxd                                    3.0.3-0ubuntu1~18.04.1                          amd64        Container hypervisor based on LXC - daemon
+ii  lxd-client                             3.0.3-0ubuntu1~18.04.1                          amd64        Container hypervisor based on LXC - client
+```
+```bash
+$ which lxd
+/usr/bin/lxd
+```
+```bash
 $ lxd --version
 3.0.3
 ```
@@ -99,7 +134,7 @@ $ lxc network list
 +-----------------+----------+---------+-------------+---------+
 | docker0         | bridge   | NO      |             | 0       |
 +-----------------+----------+---------+-------------+---------+
-| enp2s0          | physical | NO      |             | 0       |
+| enp1s0          | physical | NO      |             | 0       |
 +-----------------+----------+---------+-------------+---------+
 | lxdbr0          | bridge   | YES     |             | 1       |
 +-----------------+----------+---------+-------------+---------+

@@ -1,0 +1,70 @@
+#cloud-config
+
+hostname: %%CONTAINER_NAME%%.lxdbr0.internal
+preserve_hostname: false
+manage_etc_hosts: true
+timezone: Asia/Tokyo
+#ssh_pwauth: False
+
+packages:
+  - openrc
+  - openssh
+  - shadow
+  - tzdata
+
+users:
+  - name: %%LOGIN_USER_NAME%%
+    shell: /bin/ash
+    ssh_authorized_keys:
+      - %%SSH_PUB_KEY_00%%
+    sudo: False
+  #- name: user01
+  #  shell: /bin/ash
+  #  ssh_authorized_keys:
+  #    - %%SSH_PUB_KEY_01%%
+  #  sudo: False
+
+chpasswd:
+  list: |
+      %%LOGIN_USER_NAME%%:login_secret
+      #user01:login_secret
+  expire: False
+
+runcmd:
+  # timezone: Asia/Tokyo
+  - cp --force /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+  - echo 'Asia/Tokyo' >  /etc/timezone
+  # -R: Log to <RemoteHost>:<RemotePort>, -L: Log locally and via network
+  - sed -i '/^SYSLOGD_OPTS=/s/"-t"/"-t -R %%SYSLOG_HOST%%:%%SYSLOG_PORT%% -L -O \/var\/log\/messages"/' /etc/conf.d/syslog
+  # デーモンの再起動(TimeZone と `SYSLOGD_OPTS` の反映)
+  - rc-service syslog restart
+  # clout-init が退避したファイルを切り戻す
+  - cp --force /etc/ssh/sshd_config.apk-new /etc/ssh/sshd_config
+  # ホストの秘密鍵を指定
+  #- sed -i 's/^#\(.*HostKey \/etc\/ssh\/ssh_host_ed25519_key\)/\1/' /etc/ssh/sshd_config
+  # ログレベルを変更
+  - sed -i 's/\(#LogLevel INFO\)/\1\nLogLevel VERBOSE/' /etc/ssh/sshd_config
+  # 公開鍵認証の有効化
+  - sed -i 's/^#\(.*PubkeyAuthentication yes\)/\1/' /etc/ssh/sshd_config
+  # パスワード認証の無効化
+  - sed -i 's/\(^#PasswordAuthentication yes\)/\1\nPasswordAuthentication no/' /etc/ssh/sshd_config
+  # 空パスワードを許可しない
+  - sed -i 's/^#\(.*PermitEmptyPasswords no\)/\1/'  /etc/ssh/sshd_config
+  # チャレンジレスポンス認証の無効化
+  - sed -i 's/\(^#ChallengeResponseAuthentication yes\)/\1\nChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+  # ポートフォワードを許可(ProxyCommand -W)
+  - sed -i '/^AllowTcpForwarding /s/no/yes/' /etc/ssh/sshd_config
+  # Interval * CountMax 秒反応できない SSH クライアントを切断
+  - sed -i 's/\(^#ClientAliveInterval 0\)/\1\nClientAliveInterval 120/' /etc/ssh/sshd_config
+  - sed -i 's/^#\(.*ClientAliveCountMax\)/\1/' /etc/ssh/sshd_config
+  # コメント
+  - echo -e "\n# == Add sshd Recommended setting ==" >> /etc/ssh/sshd_config
+  # SSH プロトコルバージョン2 のみをサポート
+  - echo "Protocol 2" >> /etc/ssh/sshd_config
+  # root ユーザのログインを許可しない
+  - echo "PermitRootLogin no" >> /etc/ssh/sshd_config
+  # デーモンとして登録
+  - rc-update add sshd
+  # ssh デーモンの起動
+  - rc-service sshd start
+
